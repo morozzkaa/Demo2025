@@ -370,3 +370,6 @@
 > - DNS-суффикс – `au-team.irpo`.
 
 ---
+
+  ![named1.png](https://github.com/taharakuro/DEMO25/blob/main/named1.png)
+  ![named2.png](https://github.com/taharakuro/DEMO25/blob/main/named2.png)
