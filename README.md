@@ -643,42 +643,25 @@
 
 ### 7. Настройка Moodle
 
-- **Требования:**
-  - Веб-сервер: Apache.
-  - СУБД: MariaDB.
-  - Создать базу данных `moodledb`.
-  - Создать пользователя `moodle` с паролем `P@ssw0rd` и предоставить права.
-  - Пользователю `admin` задать пароль `P@ssw0rd`.
-  - На главной странице отобразить номер рабочего места (арабская цифра).
 
-> **Отчёт:** Основные параметры внесите в отчёт.
 
----
+### 8. Настройте веб-сервер nginx как обратный прокси-сервер на HQ-RTR
 
-### 8. Обратный прокси на nginx
-
-- **Для перенаправления запросов к `moodle.au-team.irpo` на HQ-SRV:**
-  - **На HQ-RTR:**
-    ```bash
-    en
-    conf t
-    filter-map policy ipv4 moodle 1
-      match 80 172.16.4.1/28 192.168.0.2/26 dscp 0
-      set redirect hq-rtr.moodle.au-team.irpo
-    end
-    wr mem
-
-    en
-    conf t
-    redirect-url SITEREDIRECT
-      url hq-rtr.moodle.au-team.irpo
-    end
-    wr mem
-    ```
-- **Для перенаправления запросов к `wiki.au-team.irpo` на BR-SRV:**  
-  *(Настройка аналогична, с учётом нужного порта и IP-адреса.)*
-
----
+   ```bash
+   Настройка производится на EcoRouter HQ-RTR:  
+   en  
+   conf t  
+   filter-map policy ipv4 moodle 1  
+   match 80 172.16.4.1/28 192.168.0.2/26 dscp 0
+   set redirect hq-rtr.moodle.au-team.irpo  
+   end  
+   wr mem  
+   en  
+   conf t  
+   redirect-url SITEREDIRECT  
+   url hq-rtr.moodle.au-team.irpo  
+   end  
+   wr mem  
 
 ### 9. Установка Яндекс.Браузера
 
