@@ -397,7 +397,13 @@
   dhcp-server 1
   ```
 
----
+### 10. Настройка DNS-сервера
+
+- **Установка и базовая настройка:**
+  ```bash
+  dnf install bind -y
+  nano /etc/named.conf
+  ```
 
   ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/dns.png)
   ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/dns2.png)
