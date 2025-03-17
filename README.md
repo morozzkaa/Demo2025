@@ -571,6 +571,14 @@
 
 ### 5. Развертывание MediaWiki в Docker
 
+Установка необходимых пакетов:  
+  ```bash
+  dnf install docker-ce docker-ce-cli docker-compose -y  
+  systemctl enable docker --now
+  Добавляем текущего пользователя в группу докер  
+  usermod -aG docker $USER
+  ```
+
 - **Создание файла `wiki.yml` в домашней директории пользователя:**
   ```yaml
   services:
@@ -615,17 +623,20 @@
 
 ### 6. Статическая трансляция портов
 
-- **На BR-RTR (для сервиса wiki):**
+- **Пробросьте порт 80 в порт 8080 на BR-SRV на маршрутизаторе BR-RTR, для обеспечения работы сервиса wiki:**
   ```bash
-  ip nat destination static tcp 192.168.1.2 80 192.168.1.2 8080
+  ip nat destination static tcp 192.168.1.2 80 192.168.1.65 8080
+  ip nat destination static tcp 172.16.5.1 80 192.168.1.2 8080
   ```
-- **На HQ-RTR (для сервиса SSH на HQ-SRV):**
+- **Пробросьте порт 2024 в порт 2024 на HQ-SRV на маршрутизаторе HQ-RTR**
   ```bash
-  ip nat destination static tcp 192.168.0.2 2024 192.168.0.2 2024
+  Настройка производится на EcoRouter HQ-RTR:  
+  ip nat destination static tcp 192.168.0.2 2024 192.168.1.65 2024  
   ```
-- **На BR-RTR (для сервиса SSH на BR-SRV):**
+- **Пробросьте порт 2024 в порт 2024 на BR-SRV на маршрутизаторе BR-RTR**
   ```bash
-  ip nat destination static tcp 192.168.1.2 2024 192.168.1.2 2024
+  Настройка производится на EcoRouter BR-RTR:  
+  ip nat destination static tcp 192.168.1.2 2024 192.168.1.65 2024  
   ```
 
 ---
