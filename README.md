@@ -425,8 +425,11 @@
 ```bash
   nano /etc/resolv.conf
   ```
+11. Настройте часовой пояс на всех устройствах, согласно месту проведения экзамена.
 
-
+```bash
+  timedatectl set-timezone Europe/Moscow
+  ```
 
 
 
