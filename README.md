@@ -366,7 +366,8 @@
 
 ---
 
-### 8. Динамическая трансляция адресов (NAT) [В отчете заносить не нужно будет, поэтому пункт сделан ранее]
+### 8. Динамическая трансляция адресов (NAT) 
+[В отчете заносить не нужно будет, поэтому пункт сделан ранее]
 
 - **Настройка шлюзов на серверах:**
   - **HQ-SRV:** Шлюз – `192.168.0.1/26`
@@ -431,6 +432,242 @@
   timedatectl set-timezone Europe/Moscow
   ```
 
+## Модуль №2: Организация сетевого администрирования ОС
+
+### 1. Доменный контроллер Samba
+
+#### Подготовка сервера
+
+- Перевод SELinux в `permissive`:
+  ```bash
+  setenforce 0
+  nano /etc/selinux/config  # замените режим с enforcing на permissive
+  ```
+- Настройка сети через `nmtui`:  
+  - Добавьте второй DNS-сервер: `192.168.0.1/26`  
+  - Укажите домен поиска: `au-team.irpo`  
+  - Перезапустите сетевой интерфейс.
+
+- Установка необходимых пакетов:
+  ```bash
+  dnf install samba* krb5* -y
+  ```
+
+#### Создание домена через `samba-tool`
+
+- Удалите старый файл конфигурации:
+  ```bash
+  rm /etc/samba/smb.conf
+  ```
+- Запустите:
+  ```bash
+  samba-tool domain provision --use-rfc2307 --interactive
+  ```
+  *(Следуйте интерактивным подсказкам для задания realm, доменного имени и проч.)*
+
+- **Запуск служб:**
+  ```bash
+  systemctl enable samba --now
+  systemctl status samba
+  ```
+
+#### Управление пользователями и группами
+
+- **Создание пользователей для офиса HQ:**  
+  Пользователи с именами формата `user№.hq`.
+  - Создание пользователя:
+    ```bash
+    samba-tool user create user#.hq
+    smbpasswd -a user#.hq
+    smbpasswd -e user#.hq
+    ```
+- **Создание группы и добавление пользователей:**
+  ```bash
+  samba-tool group add hq
+  samba-tool group addmembers hq user#.hq
+  ```
+- **Проверка подключения:**
+  ```bash
+  smbclient -L localhost -U%
+  ```
+
+- **Присоединение машины HQ-CLI к домену:**  
+  *(Смотрите инструкцию по ссылке: [RedOS Samba Domain](https://redos.red-soft.ru/base/redos-7_3/7_3-administation/7_3-domain-redos/7_3-domain-config/7_3-redos-in-samba/?nocache=1730793368537))*
+
+- **Импорт пользователей из файла `users.csv`:**  
+  Файл располагается на BR-SRV в папке `/opt`.
+
+---
+
+### 2. Настройка файлового хранилища
+
+- Используя три дополнительных диска (1 Гб каждый) на HQ-SRV:
+  - Создайте RAID 5 массив с именем `md0`.  
+  - Конфигурация массива должна сохраняться в `/etc/mdadm.conf`.
+  - Автоматически монтируйте массив в папку `/raid5`.
+  - Создайте раздел, отформатируйте его в `ext4`.
+- **Настройка NFS-сервера:**
+  - Экспортируйте папку `/raid5/nfs` с правами чтения и записи для сети HQ-CLI.
+  - На HQ-CLI настройте автомонтирование в `/mnt/nfs`.
+
+> **Отчёт:** Основные параметры сервера укажите в отчёте.
+
+---
+
+### 3. Настройка службы сетевого времени (chrony)
+
+- **На HQ-RTR:**
+  ```bash
+  en
+  conf t
+  ntp server 172.16.14.1 5
+  ntp timezone UTC+3
+  end
+  wr mem
+  ```
+- **Настройка сервера chrony:**  
+  Выберите стратум 5 и настройте клиентов: HQ-SRV, HQ-CLI, BR-RTR, BR-SRV.
+
+---
+
+### 4. Настройка Ansible
+
+- **Установка Ansible:**
+  ```bash
+  dnf install ansible -y
+  ```
+- **Файл инвентаря (`/etc/ansible/hosts`):**
+  ```yaml
+  [router] 
+  hq-rtr 
+  br-rtr
+  
+  [linux] 
+  hq-sru 
+  hq-cli
+  
+  [router:vars] 
+  ansible_connection=ansible.netcommon.network_cli 
+  ansible_network_os=community.network.routeros 
+  ansible_user=net_admin 
+  ansible_password=P@ssword
+  
+  [linux:vars] 
+  ansible_user=sshuser 
+  ansible_password=P@ssword
+  ```
+- **Проверка соединения:**
+  ```bash
+  ansible test -m ping
+  ```
+  *(Должен возвращаться ответ `pong` без ошибок.)*
+
+---
+
+### 5. Развертывание MediaWiki в Docker
+
+- **Создание файла `wiki.yml` в домашней директории пользователя:**
+  ```yaml
+  services:
+    MediaWiki:
+      container_name: wiki
+      image: mediawiki
+      restart: always
+      ports:
+        - 80:8080
+      links:
+        - database
+      volumes:
+        - images:/var/www/html/images
+        # - ./LocalSettings.php:/var/www/html/LocalSettings.php
+    database:
+      container_name: mariadb
+      image: mariadb
+      environment:
+        MYSQL_DATABASE: mediawiki
+        MYSQL_USER: wiki
+        MYSQL_PASSWORD: WikiP@ssw0rd
+        MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
+      volumes:
+        - dbvolume:/var/lib/mysql
+  volumes:
+    dbvolume:
+      external: true
+    images:
+  ```
+- **Запуск стека контейнеров:**
+  ```bash
+  docker compose -f wiki.yml up -d
+  ```
+- **Дальнейшие действия:**  
+  После установки раскомментируйте строку с `LocalSettings.php` и выполните:
+  ```bash
+  docker-compose -f wiki.yml stop
+  docker-compose -f wiki.yml up -d
+  ```
+
+---
+
+### 6. Статическая трансляция портов
+
+- **На BR-RTR (для сервиса wiki):**
+  ```bash
+  ip nat destination static tcp 192.168.1.2 80 192.168.1.2 8080
+  ```
+- **На HQ-RTR (для сервиса SSH на HQ-SRV):**
+  ```bash
+  ip nat destination static tcp 192.168.0.2 2024 192.168.0.2 2024
+  ```
+- **На BR-RTR (для сервиса SSH на BR-SRV):**
+  ```bash
+  ip nat destination static tcp 192.168.1.2 2024 192.168.1.2 2024
+  ```
+
+---
+
+### 7. Настройка Moodle
+
+- **Требования:**
+  - Веб-сервер: Apache.
+  - СУБД: MariaDB.
+  - Создать базу данных `moodledb`.
+  - Создать пользователя `moodle` с паролем `P@ssw0rd` и предоставить права.
+  - Пользователю `admin` задать пароль `P@ssw0rd`.
+  - На главной странице отобразить номер рабочего места (арабская цифра).
+
+> **Отчёт:** Основные параметры внесите в отчёт.
+
+---
+
+### 8. Обратный прокси на nginx
+
+- **Для перенаправления запросов к `moodle.au-team.irpo` на HQ-SRV:**
+  - **На HQ-RTR:**
+    ```bash
+    en
+    conf t
+    filter-map policy ipv4 moodle 1
+      match 80 172.16.4.1/28 192.168.0.2/26 dscp 0
+      set redirect hq-rtr.moodle.au-team.irpo
+    end
+    wr mem
+
+    en
+    conf t
+    redirect-url SITEREDIRECT
+      url hq-rtr.moodle.au-team.irpo
+    end
+    wr mem
+    ```
+- **Для перенаправления запросов к `wiki.au-team.irpo` на BR-SRV:**  
+  *(Настройка аналогична, с учётом нужного порта и IP-адреса.)*
+
+---
+
+### 9. Установка Яндекс.Браузера
+
+- **Требование:**  
+  Установить Яндекс.Браузер для организаций удобным способом и зафиксировать результат в отчёте.
 
 
 
