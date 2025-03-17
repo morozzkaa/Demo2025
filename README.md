@@ -399,5 +399,5 @@
 
 ---
 
-  ![named1.png](https://github.com/taharakuro/DEMO25/blob/main/named1.png)
-  ![named2.png](https://github.com/taharakuro/DEMO25/blob/main/named2.png)
+  ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/dns.png)
+  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/dns2.png)
