@@ -378,17 +378,17 @@
 
 - **Для офиса HQ (на HQ-RTR):**
   ```bash
-ip pool dhcpHQ 192.168.1.65-192.168.1.79
-en
-conf t
-dhcp-server 1
-pool dhcpHQ 1
-domain-name au-team.irpo
-mask 255.255.255.240  
-dns 192.168.0.2    
-gateway 192.168.1.78    
-end  
-wr mem
+  ip pool dhcpHQ 192.168.1.65-192.168.1.79
+  en
+  conf t
+  dhcp-server 1
+  pool dhcpHQ 1
+  domain-name au-team.irpo
+  mask 255.255.255.240  
+  dns 192.168.0.2    
+  gateway 192.168.1.78    
+  end  
+  wr mem
   ```
 - **Клиентом является HQ-CLI (на hq-rtr) :**  
   ```bash
