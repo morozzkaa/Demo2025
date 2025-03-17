@@ -58,11 +58,11 @@
   - Маршруты по умолчанию:
     - **HQ-RTR:**  
       ```bash
-      ip route 0.0.0.0/0 172.16.4.1
+      ip route 0.0.0.0/0 172.16.4.14
       ```
     - **BR-RTR:**  
       ```bash
-      ip route 0.0.0.0/0 172.16.5.1
+      ip route 0.0.0.0/0 172.16.5.14
       ```
 
 - **Пример конфигурации на EcoRouter для HQ-RTR:**
@@ -70,7 +70,7 @@
   en
   conf t
   int ISP
-  ip add 172.16.4.2/28
+  ip add 172.16.4.1/28
   port te0
   service-instance toISP
   encapsulation untagged
@@ -83,21 +83,37 @@
   en
   conf t
   int ISP
-  ip add 172.16.5.2/28
+  ip add 172.16.5.1/28
   port te0
   service-instance toISP
   encapsulation untagged
   connect ip interface ISP
+  end
   wr mem
   ```
-
+  en
+  conf t
+  int SRV
+  ip add 192.168.2.1/27
+  port te1
+  service-instance SRV
+  encapsulation untagged
+  connect ip interface SRV
+  end
+  wr mem
+  ```
+  
 - **Настройка динамической NAT на ISP:**
   ```bash
   echo net.ipv4.ip_forward=1 > /etc/sysctl.conf
-  dnf install iptables-services -y
-  iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
-  iptables-save > /etc/sysconfig/iptables
-  systemctl enable --now iptables
+  sysctl -p ( от sudo)
+  dnf install iptables-services -y   
+  systemctl enable ––now iptables  
+  iptables –t nat –A POSTROUTING –s 172.16.4.0/28 –o ens3 –j MASQUERADE  
+  iptables –t nat –A POSTROUTING –s 172.16.5.0/28 –o ens3 –j MASQUERADE  
+  iptables-save > /etc/sysconfig/iptables  
+  systemctl restart iptables 
+
   ```
 
 ---
@@ -122,6 +138,7 @@
 - **На маршрутизаторах (HQ-RTR, BR-RTR):**
   - Создание пользователя `net_admin` на EcoRouter:
     ```plaintext
+    conf t
     username net_admin
     password P@$$word
     role admin
@@ -131,23 +148,60 @@
 
 ### 4. Настройка виртуального коммутатора и VLAN
 
+### (4.1). Динамическая трансляция адресов (NAT)
+
+- **На HQ-RTR:**
+  ```bash
+  conf t
+  ip nat pool nat1 192.168.0.1-192.168.0.254
+  ip nat source dynamic inside-to-outside pool nat1 overload interface ISP
+  ip nat pool nat2 192.168.1.65-192.168.1.79
+  ip nat source dynamic inside-to-outside pool nat2 overload interface ISP
+
+  - **На HQ-RTR:**
+  ```bash
+  conf t
+  ip nat pool nat3 192.168.2.2-192.168.2.31
+  ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
+
 #### Создание подсети управления (VLAN 999)
 
 - **На HQ-RTR:**
   ```bash
-  int te1.999
+  int vl999
   ip add 192.168.0.81/29
   description toSW
   port te1
   service-instance toSW
-  encapsulation dot1q 999 exact
-  rewrite pop 1
-  connect ip interface te1.999
+  encapsulation untaagged
+  connect port te1 service-instance toSW
+  end
+  wr mem
   ```
-
-- **На HQ-SW:**  
-  *(Перед настройкой убедитесь, что интерфейс `ens3` отключён через nmtui)*
+  - **На HQ-RTR:**
   ```bash
+  conf t
+  int ISP
+  ip nat outside
+  ex
+  int vl999
+  ip nat inside
+  ```
+  - **На BR-RTR:**
+  ```bash
+  conf t
+  int ISP
+  ip nat outside
+  ex
+  int SRV
+  ip nat inside
+  ```
+  
+- **На HQ-SW:**  
+  *(В nmtui прописываем айпи и шлюз, устанавливаем openvswitch,затем перед настройкой убедитесь, что интерфейс `ens3` отключён через nmtui)*
+  ```bash
+  dnf install openvswitch -y
+  systemctl enable --now openvswitch
   ovs-vsctl add-br ovs0
   ovs-vsctl add-port ovs0 ens3
   ovs-vsctl set port ens3 vlan_mode=native-untagged tag=999 trunks=999,100,200
@@ -161,10 +215,10 @@
   - **На HQ-RTR:**
     ```bash
     int te1.100
-    ip add 192.168.0.1/26
+    ip add 192.168.0.62/26
     port te1
     service-instance te1.100
-    encapsulation dot1q 100 exact
+    encapsulation dot1q 100
     rewrite pop 1
     connect ip interface te1.100
     ```
@@ -181,12 +235,14 @@
   - **На HQ-RTR:**
     ```bash
     int te1.200
-    ip add 192.168.0.65/28
+    ip add 192.168.1.78/28
     port te1
     service-instance te1.200
-    encapsulation dot1q 200 exact
+    encapsulation dot1q 200
     rewrite pop 1
     connect ip interface te1.200
+    ex
+    wr mem
     ```
   - **На HQ-SW:**  
     *(Убедитесь, что `ens5` отключён в nmtui)*
@@ -196,6 +252,18 @@
     ovs-vsctl add-port ovs0 ovs0-vlan200 tag=200 -- set Interface ovs0-vlan200 type=internal
     ifconfig ovs0-vlan200 up
     ```
+- **На HQ-RTR:**
+    ```bash
+    conf t
+    int te1.100
+    ip nat inside
+    ex
+    int te1.200
+    ip nat inside
+    ex
+    wr mem
+    ```
+    
 
 > **Отчёт:** Сведения по настройке коммутатора и выбору реализации разделения на VLAN занесите в отчёт.
 
@@ -203,7 +271,7 @@
 
 ### 5. Настройка безопасного удалённого доступа
 
-- **Изменение SSH порта и SELinux:**
+- **Изменение SSH порта и SELinux:(на HQ-SRV и BR-SRV) **
   - Перевод SELinux в режим `permissive`:
     ```bash
     setenforce 0
@@ -214,11 +282,11 @@
     Port 2024
     AllowUsers sshuser
     MaxAuthTries 2
-    Banner /etc/ssh/sshd_banner
     ```
   - Создание баннера:
     ```bash
     echo "Authorized access only" > /etc/ssh/sshd_banner
+    echo Banner /etc/ssh/sshd_banner >> /etc/ssh/sshd_config
     systemctl restart sshd
     ```
 
@@ -228,36 +296,44 @@
 
 - **На HQ-RTR:**
   ```bash
-  interface tunnel.1
-  ip add 10.0.0.1/30
-  ip ospf network broadcast
-  ip ospf mtu-ignore
-  ip tunnel 172.16.4.2 172.16.5.2 mode gre
-  exit
-  conf t
-  router ospf 1
-    ospf router-id 10.0.0.1
-    network 10.0.0.0 0.0.0.3 area 0
-    network 192.168.0.0 0.0.0.255 area 0
-    passive-interface default
-    no passive-interface tunnel.1
+Ip add 172.16.0.1/30
+Ip mtu 1476  
+ip ospf network broadcast  
+ip ospf mtu-ignore  
+Ip tunnel 172.16.4.1 172.16.5.1 mode gre  
+end  
+wr mem  
+Conf t
+Router ospf 1
+Ospf router-id  172.16.0.1
+network 172.16.0.0 0.0.0.3 area 0
+network 192.168.0.0 0.0.0.63 area 0
+network 192.168.1.78 0.0.0.15 area 0
+passive-interface default
+no passive-interface tunnel.1
   ```
+- **На BR-RTR:**
+  ```bash
+
 
 - **На BR-RTR:**
   ```bash
-  interface tunnel.1
-  ip add 10.0.0.2/30
-  ip ospf mtu-ignore
-  ip ospf network broadcast
-  ip tunnel 172.16.5.2 172.16.4.2 mode gre
-  exit
-  conf t
-  router ospf 1
-    ospf router-id 10.0.0.2
-    network 10.0.0.0 0.0.0.3 area 0
-    network 192.168.1.0 0.0.0.31 area 0
-    passive-interface default
-    no passive-interface tunnel.1
+Interface tunnel.1
+Ip add 172.16.0.2/30
+Ip mtu 1476
+ip ospf mtu-ignore
+ip ospf network broadcast
+Ip tunnel 172.16.5.1 172.16.4.1 mode gre
+end
+Conf t
+Router ospf 1
+Ospf router-id 172.16.0.2
+Network 172.16.0.0 0.0.0.3 area 0
+Network 192.168.2.0 0.0.0.31 area 0
+Passive-interface default
+no passive-interface tunnel.1
+end
+wr mem
   ```
 
 > **Примечание:** Выбор технологии – GRE или IP-in-IP – производится по усмотрению.
@@ -273,7 +349,7 @@
   **На HQ-RTR:**
   ```bash
   router ospf 1
-    area 0 authentication ex
+    area 0 authentication
   interface tunnel.1
     ip ospf authentication-key ecorouter
   wr mem
@@ -292,49 +368,7 @@
 
 ---
 
-### 8. Динамическая трансляция адресов (NAT)
-
-- **На EcoRouter HQ-RTR:**
-  ```bash
-  ip nat pool OVER 192.168.0.2-192.168.0.254
-  ip nat source dynamic inside-to-outside pool OVER overload interface ISP
-  ```
-- **На EcoRouter BR-RTR:**
-  ```bash
-  ip nat pool nat3 192.168.1.2-192.168.1.31
-  ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
-  ```
-
-- **Настройка NAT на интерфейсах:**
-
-  **HQ-RTR:**
-  ```bash
-  en
-  conf t
-  int ISP
-    ip nat outside
-  exit
-  int te1.999
-    ip nat inside
-  exit
-  int te1.100
-    ip nat inside
-  exit
-  int te1.200
-    ip nat inside
-  ```
-
-  **BR-RTR:**
-  ```bash
-  en
-  conf t
-  int ISP
-    ip nat outside
-  exit
-  int SRV
-    ip nat inside
-  exit
-  ```
+### 8. Динамическая трансляция адресов (NAT) [В отчете заносить не нужно будет, поэтому пункт сделан ранее]
 
 - **Настройка шлюзов на серверах:**
   - **HQ-SRV:** Шлюз – `192.168.0.1/26`
@@ -346,28 +380,24 @@
 
 - **Для офиса HQ (на HQ-RTR):**
   ```bash
-  ip pool dhcpHQ 192.168.0.66-192.168.0.78
-  en
-  conf t
-  dhcp-server 1
-    pool dhcpHQ 1
-      domain-name au-team.irpo
-      mask 255.255.255.240
-      gateway 192.168.0.65
-      dns 192.168.0.2
-  exit
-  wr mem
+ip pool dhcpHQ 192.168.1.65-192.168.1.79
+en
+conf t
+dhcp-server 1
+pool dhcpHQ 1
+domain-name au-team.irpo
+mask 255.255.255.240  
+dns 192.168.0.2    
+gateway 192.168.1.78    
+end  
+wr mem
   ```
-- **Клиентом является HQ-CLI:**  
-  На интерфейсе `te1.200` добавьте:
+- **Клиентом является HQ-CLI (на hq-rtr) :**  
   ```bash
+  conf t
+  interface te1.200
   dhcp-server 1
   ```
-
-> **Примечания:**
-> - Исключите из выдачи адрес маршрутизатора.
-> - DNS-сервер для HQ-CLI – HQ-SRV.
-> - DNS-суффикс – `au-team.irpo`.
 
 ---
 
