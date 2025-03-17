@@ -437,80 +437,81 @@
 ### 1. Доменный контроллер Samba
 
 #### Подготовка сервера
-
-- Перевод SELinux в `permissive`:
   ```bash
-  setenforce 0
-  nano /etc/selinux/config  # замените режим с enforcing на permissive
-  ```
-- Настройка сети через `nmtui`:  
-  - Добавьте второй DNS-сервер: `192.168.0.1/26`  
-  - Укажите домен поиска: `au-team.irpo`  
-  - Перезапустите сетевой интерфейс.
-
-- Установка необходимых пакетов:
-  ```bash
-  dnf install samba* krb5* -y
+  выставляем 192.168.0.2 в качестве нащего днс сервера на линке в nmtui и домен поиска au-team.irpo  
+  setenforce 0  
+  nano /etc/selinux  
+  Замените в файле конфигурации /etc/selinux/config режим enforcing на permissive   
+  dnf install samba* krb5* -y  
+  Проверьте доступные серверы имен, просмотрев файл resolv.conf:  
+  cat /etc/resolv.conf  
+  В выводе должно отобразиться наш dns сервер и домен для поиска. 
   ```
 
-#### Создание домена через `samba-tool`
+#### Создание домена через `Samba DC`
 
 - Удалите старый файл конфигурации:
   ```bash
-  rm /etc/samba/smb.conf
+  Создание резервных копий файлов  
+  Переименуйте файл /etc/smb.conf, он будет создан позднее в процессе выполнения команды samba-tool.  
+  cp /etc/samba/smb.conf /etc/samba/smb.conf.back  
+  Создайте резервную копию используемого по умолчанию конфигурационного файла kerberos:  
+  cp /etc/krb5.conf /etc/krb5.conf.back  
   ```
-- Запустите:
+## Конфигурирование сервера с помощью утилиты samba-tool
   ```bash
+  Файла /etc/samba/smb.conf быть не должно, он сам создаст.  
+  rm -rf /etc/samba/smb.conf  
   samba-tool domain provision --use-rfc2307 --interactive
   ```
-  *(Следуйте интерактивным подсказкам для задания realm, доменного имени и проч.)*
+  ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/samba-toolprovision.png)
 
-- **Запуск служб:**
+#### Удаление использования службы dns
   ```bash
-  systemctl enable samba --now
-  systemctl status samba
+  systemctl stop samba  
+  Подчищаем, все где могут храниться наши записи  
+  sudo rm -rf /var/lib/samba/private/dns_update_cache  
+  sudo rm -rf /var/lib/samba/private/dns_update_list  
+  sudo rm -rf /var/lib/samba/private/dns  
+  sudo rm -rf /var/lib/samba/private/dns.keytab  
+  Добавляем в файл /etc/smb.conf следующее  
+  ```
+  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/smbconf.png)
+
+  ```bash
+  Запустите и добавьте в автозагрузку службы samba и named:  
+  systemctl enable named samba --now  
+  systemctl status named samba  
+  Проверка созданного домена с помощью команды samba-tool domain info au-team.irpo: 
   ```
 
-#### Управление пользователями и группами
+  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/samba-tool.png)
 
-- **Создание пользователей для офиса HQ:**  
-  Пользователи с именами формата `user№.hq`.
-  - Создание пользователя:
-    ```bash
-    samba-tool user create user#.hq
-    smbpasswd -a user#.hq
-    smbpasswd -e user#.hq
-    ```
-- **Создание группы и добавление пользователей:**
+### Создайте 5 пользователей для офиса HQ: имена пользователей формата user№.hq. Создайте группу hq, введите в эту группу созданных пользователей
   ```bash
-  samba-tool group add hq
-  samba-tool group addmembers hq user#.hq
+  sudo samba-tool group add hq  
+  for i in {1..5}; do  
+  sudo samba-tool user create user$i.hq P@ssw0rd$i  
+  sudo samba-tool group addmembers hq user$i.hq  
+  done    
   ```
-- **Проверка подключения:**
+### Введите в домен машину HQ-CLI
   ```bash
-  smbclient -L localhost -U%
+  Перед вводом необходимо ввести на HQ-SRV:  
+  smbclient -L localhost -U administrator  
+  Проверка kerberos: 
+  kinit administrator@localhost    
   ```
+### Настройка проивзодится на HQ-CLI:
 
-- **Присоединение машины HQ-CLI к домену:**  
-  *(Смотрите инструкцию по ссылке: [RedOS Samba Domain](https://redos.red-soft.ru/base/redos-7_3/7_3-administation/7_3-domain-redos/7_3-domain-config/7_3-redos-in-samba/?nocache=1730793368537))*
+  https://redos.red-soft.ru/base/redos-7_3/7_3-administation/7_3-domain-redos/7_3-domain-config/7_3-redos-in-samba/?nocache=1730793368537
 
-- **Импорт пользователей из файла `users.csv`:**  
-  Файл располагается на BR-SRV в папке `/opt`.
-
----
+### Пользователи группы hq имеют право аутентифицироваться на клиентском ПК
+### Пользователи группы hq должны иметь возможность повышать привилегии для выполнения ограниченного набора команд: cat, grep, id. Запускать другие команды с повышенными привилегиями пользователи группы не имеют права
+### Выполните импорт пользователей из файла users.csv. Файл будет располагаться на виртуальной машине BR-SRV в папке /opt
 
 ### 2. Настройка файлового хранилища
 
-- Используя три дополнительных диска (1 Гб каждый) на HQ-SRV:
-  - Создайте RAID 5 массив с именем `md0`.  
-  - Конфигурация массива должна сохраняться в `/etc/mdadm.conf`.
-  - Автоматически монтируйте массив в папку `/raid5`.
-  - Создайте раздел, отформатируйте его в `ext4`.
-- **Настройка NFS-сервера:**
-  - Экспортируйте папку `/raid5/nfs` с правами чтения и записи для сети HQ-CLI.
-  - На HQ-CLI настройте автомонтирование в `/mnt/nfs`.
-
-> **Отчёт:** Основные параметры сервера укажите в отчёте.
 
 ---
 
@@ -518,11 +519,11 @@
 
 - **На HQ-RTR:**
   ```bash
-  en
-  conf t
-  ntp server 172.16.14.1 5
-  ntp timezone UTC+3
-  end
+  en  
+  conf t  
+  ntp server 172.16.4.1   
+  ntp timezone UTC+3  
+  end  
   wr mem
   ```
 - **Настройка сервера chrony:**  
@@ -536,31 +537,35 @@
   ```bash
   dnf install ansible -y
   ```
-- **Файл инвентаря (`/etc/ansible/hosts`):**
-  ```yaml
-  [router] 
-  hq-rtr 
-  br-rtr
   
-  [linux] 
-  hq-sru 
-  hq-cli
-  
-  [router:vars] 
-  ansible_connection=ansible.netcommon.network_cli 
-  ansible_network_os=community.network.routeros 
-  ansible_user=net_admin 
-  ansible_password=P@ssword
-  
-  [linux:vars] 
-  ansible_user=sshuser 
-  ansible_password=P@ssword
-  ```
-- **Проверка соединения:**
+### 1) В файле /etc/ansible/hosts.yml прописать все хосты, на которые будет распространяться конфигурация.  
+### Хосты можно разделить по группам, а так же, если у вас есть домен, то автоматически экспортировать список из домена.  
+### Можно прописывать как ip адреса так и имена хостов, если они резолвятся DNS ом в сети.  
   ```bash
-  ansible test -m ping
-  ```
-  *(Должен возвращаться ответ `pong` без ошибок.)*
+    nano /etc/ansible/inventory.yml
+
+   clients:  
+     hosts:  
+       hq-cli.au-team.irpo:  
+   servers:  
+     hosts:  
+       hq-srv.au-team.irpo:  
+   routers:  
+     hosts:  
+       hq-rtr.au-team.irpo:  
+       br-rtr.au-team.irpo: 
+       
+    2) Подключение к хостам осуществляется по протоколу ssh с помощью rsa ключей.    
+    Сгенерировать серверный ключ можно командой ниже. При её выполнении везде нажмите Enter.    
+    ssh-keygen -C "$(whoami)@$(hostname)-$(date -I)"  
+    
+    3) Далее нужно распространить ключ на все подключенные хосты.  
+    Распространить ключи на хосты можно командой:  
+    ssh-copy-id root@server  
+    где:  
+    root - это пользователь, от имени которого будут выполняться плейбуки;  
+    server - IP-адрес хоста.
+   ```
 
 ---
 
