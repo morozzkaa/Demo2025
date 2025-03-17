@@ -402,8 +402,38 @@
 - **Установка и базовая настройка:**
   ```bash
   dnf install bind -y
+  systemctl enable --now named
+  chattr -f +i /etc/resolv.conf
+  cp /etc/named.conf /etc/named.conf.backup
   nano /etc/named.conf
   ```
 
   ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/dns.png)
   ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/dns2.png)
+
+
+```bash
+  chown -R root:named /var/named/master/
+  chmod 750 /var/named/*
+  chmod 750 /var/named/master/*
+  systemctl restart named
+  ```
+Проверить зоны можно командой named-checkconf -z
+
+Для полной работоспособности на HQ-CLI нужно установить в качестве dns севрера HQ-SRV:
+
+```bash
+  nano /etc/resolv.conf
+  ```
+
+
+
+
+
+
+
+
+
+
+
+
