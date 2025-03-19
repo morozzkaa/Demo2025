@@ -512,8 +512,101 @@
 
 ### 2. Настройка файлового хранилища
 
+Перед тем как начать проверяем, что установлены следюущие пакеты 
+  ```bash
+dnf isntall mdadm nfs-utils -y
+  ```
+### При помощи трёх дополнительных дисков, размером 1Гб каждый, на HQ-SRV сконфигурируйте дисковый массив уровня 5
 
----
+  ```bash
+  mdadm --create --verbose /dev/md0 --level=5 --raid-devices=3 /dev/sdb /dev/sdc /dev/sdd     
+  ```
+
+ ![named3.png](https://github.com/dizzamer/DEMO2025/raw/main/mdadm_create.png)
+
+ ![named4.png](https://github.com/dizzamer/DEMO2025/raw/main/mdadm_detail.png)
+
+ ### Имя устройства – md0, конфигурация массива размещается в файле /etc/mdadm.conf
+
+  ```bash
+  mdadm --detail --scan >> /etc/mdadm.conf
+  ```bash
+
+### Обеспечьте автоматическое монтирование в папку /raid5
+```bash
+Добавляем в /etc/fstab:    
+nano /etc/fstab  
+/dev/md0 /raid5 ext4 defaults 0 0
+```
+ ![named5.png](https://github.com/dizzamer/DEMO2025/raw/main/fstab.png)
+
+ ### Создайте раздел, отформатируйте раздел, в качестве файловой системы используйте ext4
+
+ ```bash
+ mkfs.ext4 /dev/md0
+ ```
+![named6.png](https://github.com/dizzamer/DEMO2025/raw/main/mkfs.png) 
+
+### Создаем точку монтирования и примонтируемся
+
+```bash
+mkdir -p /raid5   
+mount -a
+```
+
+![named7.png](https://github.com/dizzamer/DEMO2025/raw/main/mount.png) 
+
+### Создаем папку для NFS
+
+```bash
+mkdir -p /raid5/nfs  
+chmod 777 /raid5/nfs
+```
+
+![named8.png](https://github.com/dizzamer/DEMO2025/raw/main/mkdir_nfs.png)
+
+### Настройка экспорта
+
+### Добавляем в /etc/exports:
+
+```bash
+nano /etc/exports  
+/raid5/nfs 192.168.1.0/28(rw,sync,insecure,nohide,all_squash,no_subtree_check)
+/raid5/nfs 192.168.0.0/26(rw,sync,insecure,nohide,all_squash,no_subtree_check)
+```
+
+![named9.png](https://github.com/dizzamer/DEMO2025/raw/main/exports.png)
+
+### Применяем изменения и перезагружаем службу
+
+```bash
+exportfs -rav  
+systemctl restart nfs-server
+```
+
+### Настройка проивзодится на HQ-CLI:
+### На HQ-CLI настройте автомонтирование в папку /mnt/nfs
+
+  ```bash
+  Добавляем в /etc/fstab:    
+  nano /etc/fstab  
+  hq-srv:/raid5/nfs /mnt/nfs nfs defaults 0 0
+  ```bash
+
+  ![named10.png](https://github.com/dizzamer/DEMO2025/raw/main/fstab_hqcli.png)
+
+  ### Создаем точку монтирования и примонтируемся
+  ```bash
+  mkdir -p /mnt/nfs  
+  mount -a 
+  ```
+![named11.png](https://github.com/dizzamer/DEMO2025/raw/main/nount_cli.png)
+
+### Проверка монтирования
+
+### После этого при создании файла на клиенте, он должен появляться и на сервере
+
+Основные параметры сервера отметьте в отчёте
 
 ### 3. Настройка службы сетевого времени (chrony)
 
