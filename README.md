@@ -530,7 +530,7 @@ dnf isntall mdadm nfs-utils -y
 
   ```bash
   mdadm --detail --scan >> /etc/mdadm.conf
-  ```bash
+  ```
 
 ### Обеспечьте автоматическое монтирование в папку /raid5
 ```bash
@@ -591,7 +591,7 @@ systemctl restart nfs-server
   Добавляем в /etc/fstab:    
   nano /etc/fstab  
   hq-srv:/raid5/nfs /mnt/nfs nfs defaults 0 0
-  ```bash
+  ```
 
   ![named10.png](https://github.com/dizzamer/DEMO2025/raw/main/fstab_hqcli.png)
 
