@@ -755,10 +755,12 @@ systemctl restart nfs-server
    url hq-rtr.moodle.au-team.irpo  
    end  
    wr mem  
+   ```
 
 ### 9. Установка Яндекс.Браузера
 
   Установить Яндекс.Браузер для организаций удобным способом и зафиксировать результат в отчёте.
+  
    ```bash
    dnf install yandex-browser -y
    ```
