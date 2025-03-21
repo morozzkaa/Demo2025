@@ -418,7 +418,9 @@
   chmod 750 /var/named/*
   chmod 750 /var/named/master/*
   systemctl restart named
-  ```
+```
+![name1.png](https://github.com/morozzkaa/Demo2025/blob/admin/au-team.png)
+
 Проверить зоны можно командой named-checkconf -z
 
 Для полной работоспособности на HQ-CLI нужно установить в качестве dns севрера HQ-SRV:
