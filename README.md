@@ -420,7 +420,7 @@
 ```bash
 nano /var/named/master/168.192.zone
 ```
-![name2.png](https://github.com/morozzkaa/Demo2025/blob/admin/au-team.png)
+![name2.png](https://github.com/morozzkaa/Demo2025/blob/admin/168.192.zone.png)
 
 ```bash
   chown -R root:named /var/named/master/
