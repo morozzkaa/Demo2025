@@ -411,7 +411,16 @@
 
   ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/dns.png)
   ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/dns2.png)
-
+  ```bash
+  mkdir /var/named/master
+  nano /var/named/master/au-team
+  ```
+  ![name1.png](https://github.com/morozzkaa/Demo2025/blob/admin/au-team.png)
+  
+```bash
+nano /var/named/master/168.192.zone
+```
+![name2.png](https://github.com/morozzkaa/Demo2025/blob/admin/au-team.png)
 
 ```bash
   chown -R root:named /var/named/master/
@@ -419,7 +428,6 @@
   chmod 750 /var/named/master/*
   systemctl restart named
 ```
-![name1.png](https://github.com/morozzkaa/Demo2025/blob/admin/au-team.png)
 
 Проверить зоны можно командой named-checkconf -z
 
