@@ -436,6 +436,8 @@ nano /var/named/master/168.192.zone
 ```bash
   nano /etc/resolv.conf
   ```
+![name2.png](https://github.com/morozzkaa/Demo2025/blob/admin/resolv.conf.png?raw=true)
+
 11. Настройте часовой пояс на всех устройствах, согласно месту проведения экзамена.
 
 ```bash
