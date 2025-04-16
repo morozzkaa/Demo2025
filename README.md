@@ -298,6 +298,7 @@
 
 - **На HQ-RTR:**
   ```bash
+  Interface tunnel.1
   Ip add 172.16.0.1/30
   Ip mtu 1476  
   ip ospf network broadcast  
