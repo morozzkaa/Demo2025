@@ -410,8 +410,8 @@
   nano /etc/named.conf
   ```
 
-  ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/dns.png)
-  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/dns2.png)
+  ![named1.png](https://github.com/morozzkaa/Demo2025/blob/admin/named.1.jpg)
+  ![named2.png](https://github.com/morozzkaa/Demo2025/blob/admin/named.2.jpg)
   ```bash
   mkdir /var/named/master
   nano /var/named/master/au-team
