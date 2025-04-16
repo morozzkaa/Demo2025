@@ -380,9 +380,9 @@
 
 - **Для офиса HQ (на HQ-RTR):**
   ```bash
-  ip pool dhcpHQ 192.168.1.65-192.168.1.79
   en
   conf t
+  ip pool dhcpHQ 192.168.1.65-192.168.1.79
   dhcp-server 1
   pool dhcpHQ 1
   domain-name au-team.irpo
