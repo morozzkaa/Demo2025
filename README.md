@@ -161,7 +161,7 @@
   ip nat source dynamic inside-to-outside pool nat2 overload interface ISP
 
   - **На BR-RTR:**
-  ```bash
+    ```bash
   conf t
   ip nat pool nat3 192.168.2.2-192.168.2.31
   ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
@@ -357,7 +357,7 @@
   **На BR-RTR:**
   ```bash
   router ospf 1
-    area 0 authentication ex
+    area 0 authentication
   interface tunnel.1
     ip ospf authentication-key ecorouter
   wr mem
