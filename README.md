@@ -161,7 +161,7 @@
   ip nat source dynamic inside-to-outside pool nat2 overload interface ISP
 
   - **На BR-RTR:**
-    ```bash
+  ```bash
   conf t
   ip nat pool nat3 192.168.2.2-192.168.2.31
   ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
@@ -451,7 +451,7 @@ nano /var/named/master/168.192.zone
 
 #### Подготовка сервера
   ```bash
-  выставляем 192.168.0.2 в качестве нащего днс сервера на линке в nmtui и домен поиска au-team.irpo  
+  (BR-SRV выставляем 192.168.0.2 в качестве нашего днс сервера на линке в nmtui и домен поиска au-team.irpo  
   setenforce 0  
   nano /etc/selinux  
   Замените в файле конфигурации /etc/selinux/config режим enforcing на permissive   
@@ -463,7 +463,7 @@ nano /var/named/master/168.192.zone
 
 #### Создание домена через `Samba DC`
 
-- Удалите старый файл конфигурации:
+- Создание домена под управлением контроллера домена Samba DC:
   ```bash
   Создание резервных копий файлов  
   Переименуйте файл /etc/smb.conf, он будет создан позднее в процессе выполнения команды samba-tool.  
