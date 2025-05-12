@@ -161,10 +161,10 @@
   ip nat source dynamic inside-to-outside pool nat2 overload interface ISP
 
   - **На BR-RTR:**
-  ```bash
-  conf t
-  ip nat pool nat3 192.168.2.2-192.168.2.31
-  ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
+    ```bash
+     conf t
+     ip nat pool nat3 192.168.2.2-192.168.2.31
+     ip nat source dynamic inside-to-outside pool nat3 overload interface ISP
 
 #### Создание подсети управления (VLAN 999)
 
