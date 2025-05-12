@@ -706,15 +706,26 @@ systemctl restart nfs-server
   ```bash
   docker compose -f wiki.yml up -d
   ```
-- **Дальнейшие действия:**  
-  После установки раскомментируйте строку с `LocalSettings.php` и выполните:
-  ```bash
-  docker-compose -f wiki.yml stop
-  docker-compose -f wiki.yml up -d
-  ```
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/wikiyml.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki2.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki3.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki4.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki5.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki6.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki7.png)
+  ![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/mediawiki8.png)
 
----
+### Открывем директорию через терминал:
+![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/localsettingsterm.png)
 
+### Перекидываем его через scp следующим образом:
+![named11.png](https://github.com/morozzkaa/Demo2025/blob/admin/localsettingsterm2.png)
+### Далее раскоменчиваем строку localsettings в файле wiki.yml:
+
+ docker-compose -f wiki.yml up -d
+
+### Для проверки того, что все получилось входим под админской учеткой Wiki:WikiP@ssw0rd
 ### 6. Статическая трансляция портов
 
 - **Пробросьте порт 80 в порт 8080 на BR-SRV на маршрутизаторе BR-RTR, для обеспечения работы сервиса wiki:**
@@ -737,7 +748,57 @@ systemctl restart nfs-server
 
 ### 7. Настройка Moodle
 
+```bash
+setenforce 0
+nano /etc/selinux
+Переводим в состояние disabled
+ dnf install -y git httpd mariadb-server php php-cli php-common php-fpm php-gd php-intl php-json php-   mbstring php-mysqlnd php-opcache php-pdo php-xml php-xmlrpc php-pecl-zip php-soap
+```
+```bash
+ systemctl enable --now httpd  
+Создаем конфигурационный файл /etc/httpd/conf.d/moodle.conf:  
+nano /etc/httpd/conf.d/moodle.conf  
+<VirtualHost *:80>  
+    DocumentRoot "/var/www/html/moodle"  
+    ServerName HQ-SRV  
+    <Directory "/var/www/html/moodle">  
+        AllowOverride All  
+        Require all granted  
+    </Directory>  
+    ErrorLog "/var/log/httpd/moodle_error.log"  
+    CustomLog "/var/log/httpd/moodle_access.log" combined  
+</VirtualHost>  
+ Перезапускаем Apache:  
+ systemctl restart httpd
 
+В качестве системы управления базами данных используйте mariadb
+ systemctl enable --now mariadb  
+ mysql_secure_installation
+```
+### Создайте базу данных moodledb
+```bash
+ mysql -u root -p   
+ CREATE DATABASE moodledb DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;  
+```
+### Создайте пользователя moodle с паролем P@ssw0rd и предоставьте ему права доступа к этой базе данных
+```bash 
+ CREATE USER 'moodle'@'localhost' IDENTIFIED BY 'P@ssw0rd';   
+ GRANT ALL PRIVILEGES ON moodledb.* TO 'moodle'@'localhost';   
+ FLUSH PRIVILEGES;   
+ EXIT;
+```
+### У пользователя admin в системе обучения задайте пароль P@ssw0rd
+```bash
+ Создаем директории для нашего moodle  
+ mkdir /opt/moodle  
+ mkdir /usr/moodle_data  
+ Далее переходим в директорию и клонируем  
+ cd /opt/moodle  
+ git clone git://git.moodle.org/moodle.git  
+ cd /opt/moodle/moodle  
+ cp config-dist.php config.php  
+```
+### Основные параметры отметьте в отчёте
 
 ### 8. Настройте веб-сервер nginx как обратный прокси-сервер на HQ-RTR
 
