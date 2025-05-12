@@ -478,7 +478,7 @@ nano /var/named/master/168.192.zone
   rm -rf /etc/samba/smb.conf  
   samba-tool domain provision --use-rfc2307 --interactive
   ```
-  ![named1.png](https://github.com/dizzamer/DEMO2025/blob/main/samba-toolprovision.png)
+  ![named1.png](https://github.com/morozzkaa/Demo2025/blob/admin/samba-toolprovision.png)
 
 #### Удаление использования службы dns
   ```bash
@@ -488,9 +488,9 @@ nano /var/named/master/168.192.zone
   sudo rm -rf /var/lib/samba/private/dns_update_list  
   sudo rm -rf /var/lib/samba/private/dns  
   sudo rm -rf /var/lib/samba/private/dns.keytab  
-  Добавляем в файл /etc/smb.conf следующее  
+  Добавляем в файл /etc/samba/smb.conf следующее  
   ```
-  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/smbconf.png)
+  ![named2.png](https://github.com/morozzkaa/Demo2025/blob/admin/smbconf.png)
 
   ```bash
   Запустите и добавьте в автозагрузку службы samba и named:  
@@ -499,7 +499,7 @@ nano /var/named/master/168.192.zone
   Проверка созданного домена с помощью команды samba-tool domain info au-team.irpo: 
   ```
 
-  ![named2.png](https://github.com/dizzamer/DEMO2025/blob/main/samba-tool.png)
+  ![named2.png](https://github.com/morozzkaa/Demo2025/blob/admin/samba-tool.png)
 
 ### Создайте 5 пользователей для офиса HQ: имена пользователей формата user№.hq. Создайте группу hq, введите в эту группу созданных пользователей
   ```bash
@@ -518,8 +518,29 @@ nano /var/named/master/168.192.zone
   ```
 ### Настройка проивзодится на HQ-CLI:
 
-  https://redos.red-soft.ru/base/redos-7_3/7_3-administation/7_3-domain-redos/7_3-domain-config/7_3-redos-in-samba/?nocache=1730793368537
+### Для запуска join-to-domain в графическом режиме откройте «Главное меню» - «Системные» - «Ввод ПК в домен».
+### После успешной аутентификации откроется окно выбора типа домена на базе SAMBA или FreeIPA. Для ввода в домен SAMBA выберите пункт «Домен Windows/SAMBA».
+![named2.png](https://github.com/morozzkaa/Demo2025/blob/admin/ro-in-samba-3.png)
 
+### Будет открыто окно, в котором необходимо заполнить поля:
+### После нажатия на кнопку «Да» начнется процесс присоединения ПК к домену.
+![named2.png](https://github.com/morozzkaa/Demo2025/blob/admin/ro-in-samba-4.png)
+
+### В случае успешного ввода в домен появится уведомление
+
+### Перезагрузите компьютер и войдите в РЕД ОС, используя логин и пароль пользователя домена.
+
+### Управление пользователями и группами:
+### Создадим пользователя в Active Directory и делаем тесты:
+ ```bash
+  samba-tool user create PetrovDA
+    Изменение пароля пользователя:
+   samba-tool user setpassword PetrovDA
+   Добавление группы:
+  samba-tool group add MyGroup
+   Удаление группы:
+  samba-tool group delete MyGroup
+  ```
 ### Пользователи группы hq имеют право аутентифицироваться на клиентском ПК
 ### Пользователи группы hq должны иметь возможность повышать привилегии для выполнения ограниченного набора команд: cat, grep, id. Запускать другие команды с повышенными привилегиями пользователи группы не имеют права
 ### Выполните импорт пользователей из файла users.csv. Файл будет располагаться на виртуальной машине BR-SRV в папке /opt
